@@ -1,0 +1,45 @@
+tasks.register('srcDist', Zip) {
+    group = "JPF Distribution"
+    description = "Builds the source distribution."
+
+    archiveBaseName = project.name
+    archiveVersion = project.version
+    archiveClassifier = "src"
+    archiveExtension = "zip"
+
+    destinationDirectory = buildDir
+    includeEmptyDirs = false
+
+    from projectDir
+    include "build.gradle"
+    include "settings.gradle"
+    include "gradlew"
+    include "gradlew.bat"
+    include "gradle/**/*"
+    include "src/**/*"
+    include "bin/**/*"
+    include "jpf.properties"
+    include "build.properties"
+    include "LICENSE-2.0.txt"
+    include "README.md"
+}
+
+tasks.register('dist', Zip) {
+    group = "JPF Distribution"
+    description = "Builds binary distribution."
+
+    archiveBaseName = project.name
+    archiveVersion = project.version
+    archiveExtension = "zip"
+
+    destinationDirectory = buildDir
+    includeEmptyDirs = false
+
+    from projectDir
+    include "jpf.properties"
+    include "build.properties"
+    include "bin/**/*"
+    include "lib/**/*"
+    include "${buildDir.name}/**/*.jar"
+}
+

@@ -1,0 +1,376 @@
+plugins {
+    id 'java'
+    id 'maven-publish'
+    id 'jacoco'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+}
+
+gradleEnterprise {
+    buildScan {
+        termsOfServiceUrl = "https://gradle.com/terms-of-service"
+        termsOfServiceAgree = "yes"
+    }
+}
+
+def static getCurrentVersion() {
+    "DEVELOPMENT-SNAPSHOT"
+}
+
+version = currentVersion
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation 'org.ow2.asm:asm:9.5'
+    testImplementation('junit:junit:4.13.1')
+}
+
+configurations {
+    customTestImpl.extendsFrom testImplementation
+}
+
+tasks.register('copyLibs', Copy) {
+    from configurations.customTestImpl
+    into 'build'
+}
+
+jar {
+    manifest {
+        attributes(
+                "Built-By": System.getProperty("user.name"),
+                "Implementation-Vendor": "NASA Ames Research Center",
+                "Implementation-Version": version
+        )
+    }
+}
+
+apply from: "gradle/ide-support.gradle"
+apply from: "gradle/distribution.gradle"
+apply from: "gradle/source-sets.gradle"
+apply from: "gradle/build-resources.gradle"
+
+compileJava.dependsOn(copyLibs)
+
+tasks.named('compileClassesJava') {
+    dependsOn(copyLibs)
+    dependsOn(copyResources)
+}
+tasks.named('compileExamplesJava') {
+    dependsOn(copyLibs)
+    dependsOn(copyResources)
+}
+tasks.named('compileModulesJava') {
+    dependsOn(copyLibs)
+    dependsOn(copyResources)
+}
+tasks.named('compilePeersJava') {
+    dependsOn(copyLibs)
+    dependsOn(copyResources)
+}
+tasks.named('compileTestJava') {
+    dependsOn(copyLibs)
+    dependsOn(copyResources)
+    dependsOn(compileModulesJava)
+}
+tasks.named('jar') {
+    dependsOn(copyLibs)
+    dependsOn(copyResources)
+}
+
+
+tasks.register('compileModules', JavaCompile) {
+    dependsOn(copyLibs)
+    dependsOn compileTestJava
+    source = fileTree(dir: 'src/classes/modules')
+    classpath = files('build/annotations', 'build/classes', 'build/main')
+    options.compilerArgs = [
+            '--module-source-path', file('src/classes/modules'),
+            '--add-exports', 'java.base/sun.net.www.protocol.http=ALL-UNNAMED',
+            '--add-reads', 'java.base=ALL-UNNAMED',
+            '--patch-module', "java.base=" + file('src/classes/modules/java.base'),
+            '--patch-module', "java.logging=" + file('src/classes/modules/java.logging'),
+            '--patch-module', "java.xml=" + file('src/classes/modules/java.xml'),
+    ]
+    destinationDirectory = file('build/classes/modules')
+}
+
+tasks.register('compile') {
+    group = "JPF Build"
+    description = "Compiles all JPF core sources."
+
+    // These are automatic generated tasks from the Java Gradle Plugin.
+    // Gradle is able to infer the order of the source sets
+    // due to the compileClasspath attribute
+    dependsOn(copyLibs)
+    dependsOn compileExamplesJava
+    dependsOn compileModules
+}
+
+tasks.register('createJpfClassesJar', Jar) {
+    archiveFileName = "jpf-classes.jar"
+    destinationDirectory = file("${buildDir}")
+
+    group = "JPF Jars"
+    description = "Creates the ${archiveFileName} file."
+
+    dependsOn(copyLibs)
+    dependsOn compile
+    dependsOn copyResources
+
+    from sourceSets.classes.java.destinationDirectory
+    from sourceSets.annotations.java.destinationDirectory
+    from(sourceSets.main.java.destinationDirectory) {
+        include "gov/nasa/jpf/JPFShell.class"
+        include "gov/nasa/jpf/vm/Verify.class"
+        include "gov/nasa/jpf/util/TypeRef.class"
+        include "gov/nasa/jpf/util/test/TestJPF.class"
+        include "gov/nasa/jpf/util/test/TestMultiProcessJPF.class"
+        include "gov/nasa/jpf/util/test/TestJPFHelper.class"
+    }
+}
+
+tasks.register('createJpfJar', Jar) {
+    archiveFileName = "jpf.jar"
+    destinationDirectory = file("${buildDir}")
+
+    group = "JPF Jars"
+    description = "Creates the ${archiveFileName} file."
+
+    dependsOn(copyLibs)
+    dependsOn compile
+    dependsOn copyResources
+
+    from sourceSets.main.java.destinationDirectory
+    from sourceSets.peers.java.destinationDirectory
+    from sourceSets.annotations.java.destinationDirectory
+    from(sourceSets.classes.java.destinationDirectory) {
+        include "org/junit/*.class"
+    }
+
+    manifest {
+        attributes "Implementation-Title": "Java Pathfinder core system"
+        from jar.manifest
+    }
+}
+
+tasks.register('createAnnotationsJar', Jar) {
+    archiveFileName = "jpf-annotations.jar"
+    destinationDirectory = file("${buildDir}")
+
+    group = "JPF Jars"
+    description = "Creates the ${archiveFileName} file."
+
+    dependsOn(copyLibs)
+    dependsOn compile
+    dependsOn copyResources
+
+    from sourceSets.annotations.java.destinationDirectory
+}
+
+tasks.register('createClassloaderSpecificTestsJar', Jar) {
+    archiveFileName = "classloader_specific_tests.jar"
+    destinationDirectory = file("${buildDir}")
+
+    group = "JPF Jars"
+    description = "Creates the ${archiveFileName} file."
+
+    dependsOn(copyLibs)
+    dependsOn compile
+    dependsOn copyResources
+
+    from(sourceSets.test.java.destinationDirectory) {
+        include "classloader_specific_tests/*.class"
+    }
+}
+
+tasks.register('createRunJpfJar', Jar) {
+    archiveFileName = "RunJPF.jar"
+    destinationDirectory = file("${buildDir}")
+
+    description = "Creates the ${archiveFileName} file."
+    group = "JPF Jars"
+
+    dependsOn compile
+    dependsOn copyResources
+
+    from(sourceSets.main.java.destinationDirectory) {
+        include "gov/nasa/jpf/tool/Run.class"
+        include "gov/nasa/jpf/tool/RunJPF.class"
+        include "gov/nasa/jpf/Config.class"
+        include "gov/nasa/jpf/ConfigChangeListener.class"
+        include "gov/nasa/jpf/Config\$MissingRequiredKeyException.class"
+        include "gov/nasa/jpf/JPFClassLoader.class"
+        include "gov/nasa/jpf/JPFShell.class"
+        include "gov/nasa/jpf/JPFException.class"
+        include "gov/nasa/jpf/JPFConfigException.class"
+        include "gov/nasa/jpf/JPFTargetException.class"
+        include "gov/nasa/jpf/util/JPFSiteUtils.class"
+        include "gov/nasa/jpf/util/FileUtils.class"
+        include "gov/nasa/jpf/util/StringMatcher.class"
+        include "gov/nasa/jpf/util/Pair.class"
+    }
+    manifest {
+        attributes(
+                "Implementation-Title": "Java Pathfinder core launch system",
+                "Main-Class": "gov.nasa.jpf.tool.RunJPF"
+        )
+        from jar.manifest
+    }
+}
+
+tasks.register('createRunTestJar', Jar) {
+    archiveFileName = "RunTest.jar"
+    destinationDirectory = file("${buildDir}")
+
+    description = "Creates the ${archiveFileName} file."
+    group = "JPF Jars"
+
+    dependsOn compile
+    dependsOn copyResources
+
+    from(sourceSets.main.java.destinationDirectory) {
+        include "gov/nasa/jpf/tool/Run.class"
+        include "gov/nasa/jpf/tool/RunTest.class"
+        include "gov/nasa/jpf/tool/RunTest\$Failed.class"
+        include "gov/nasa/jpf/Config.class"
+        include "gov/nasa/jpf/ConfigChangeListener.class"
+        include "gov/nasa/jpf/Config\$MissingRequiredKeyException.class"
+        include "gov/nasa/jpf/JPFClassLoader.class"
+        include "gov/nasa/jpf/JPFException.class"
+        include "gov/nasa/jpf/JPFConfigException.class"
+        include "gov/nasa/jpf/util/JPFSiteUtils.class"
+        include "gov/nasa/jpf/util/FileUtils.class"
+        include "gov/nasa/jpf/util/StringMatcher.class"
+        include "gov/nasa/jpf/util/DevNullPrintStream.class"
+    }
+    manifest {
+        attributes(
+                "Implementation-Title": "Java Pathfinder test launch system",
+                "Main-Class": "gov.nasa.jpf.tool.RunTest"
+        )
+        from jar.manifest
+    }
+}
+
+tasks.register('buildJars') {
+    group = "JPF Build"
+    description = "Generates all core JPF jar files."
+
+    dependsOn(copyLibs)
+    dependsOn createClassloaderSpecificTestsJar
+    dependsOn createAnnotationsJar
+    dependsOn createJpfClassesJar
+    dependsOn createJpfJar
+    dependsOn createRunJpfJar
+    dependsOn createRunTestJar
+}
+
+test {
+    description = "Runs core regression tests."
+
+    dependsOn buildJars
+    jacoco.enabled = false
+
+    forkEvery = 1
+    enableAssertions = true
+    maxHeapSize = "1024m"
+
+    include "**/*Test.class"
+    exclude "**/SplitInputStreamTest.class"
+    exclude "**/JPF_*.class"
+
+    jvmArgs += ['--add-exports', 'java.base/jdk.internal.misc=ALL-UNNAMED', '--add-opens', 'java.base/jdk.internal.misc=ALL-UNNAMED', '--add-opens', 'java.base/java.lang=ALL-UNNAMED', '--add-opens', 'java.base/java.util=ALL-UNNAMED']
+
+    testLogging {
+        events "passed", "skipped", "failed"
+    }
+
+    afterSuite { testDescriptor, result ->
+        if (!testDescriptor.parent) {
+            println "Test Execution: ${result.resultType}"
+
+            def summaryFields = ["${result.testCount} tests",
+                                 "${result.successfulTestCount} passed",
+                                 "${result.failedTestCount} failed",
+                                 "${result.skippedTestCount} skipped"]
+
+            println "Summary: " + summaryFields.join(", ")
+        }
+    }
+}
+
+jacoco {
+    toolVersion = "0.8.9"
+}
+
+jacocoTestReport {
+    reports {
+        xml.required = false
+        csv.required = false
+        html.outputLocation = layout.buildDirectory.dir('jacocoHtml')
+    }
+}
+
+
+publishing {
+    publications {
+        jpfCore(MavenPublication) {
+            groupId = 'gov.nasa'
+            artifactId = 'jpf-core'
+            artifact createJpfJar
+        }
+        jpfAnnotation(MavenPublication) {
+            groupId = 'gov.nasa'
+            artifactId = 'jpf-annotations'
+            artifact createAnnotationsJar
+        }
+        jpfClasses(MavenPublication) {
+            groupId = 'gov.nasa'
+            artifactId = 'jpf-classes'
+            artifact createJpfClassesJar
+        }
+    }
+    repositories {
+        maven {
+            url = "https://plugins.gradle.org/m2/"
+        }
+    }
+}
+
+def PolDetJPFClasspath = "${buildDir}/tests:" + configurations.testRuntimeClasspath.findAll { it.name.endsWith('jar') && (it.name.contains('junit') || it.name.contains('hamcrest')) }.join(":")
+
+tasks.register('testPolDet', Exec) {
+    group = "PolDet@JPF"
+    description = "Run PolDet on example tests."
+
+    dependsOn buildJars
+
+    commandLine 'java', '-jar', "${buildDir}/RunJPF.jar", "+classpath=${PolDetJPFClasspath}", "PolDetMain", "PolDetExamples"
+}
+
+tasks.register('runPolDet', Exec) {
+    group = "PolDet@JPF"
+    description = "Run PolDet on a given test class."
+
+    dependsOn buildJars
+
+    def JPFClasspath = "${PolDetJPFClasspath}:" + project.findProperty("testClasspath") ?: ""
+
+    commandLine 'java', '-jar', "${buildDir}/RunJPF.jar", "+classpath=${JPFClasspath}", "PolDetMain", project.findProperty("testClass") ?: ""
+}
+
+defaultTasks "buildJars"
+
+sourceSets {
+    test {
+        resources {
+            srcDirs = ['src/tests/resources']
+        }
+    }
+}
