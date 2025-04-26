@@ -1,0 +1,9 @@
+# JPF configuration for AddDemo
+target=SortVerifier
+classpath=.
+
+# Enable verification of nondeterministic resource allocation
+#listener=gov.nasa.jpf.listener.PreciseRaceDetector
+#search.class=gov.nasa.jpf.search.DFSearch
+
+#search.class = .search.heuristic.BFSHeuristic
