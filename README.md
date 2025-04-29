@@ -56,7 +56,21 @@ Navigate to the folder where TestProgram.java is located.
 Compile the program: javac TestProgram.java  
 Run JPF: jpf TestProgram.jpf 
 
-D:\02.Spring 2025\BankerAlgo-FormalVerification\ jpf-core\src\project
-BankersVerifier.java static case
+javac -d build\classes src\project\BankersVerifier.java
+target=project.BankersVerifier
+classpath=build\classes
+jpf TestProgram.jpf
 
-DynamicBankersVerifier.java dynamic case
+
+Folder structure
+BankerAlgo-FormalVerification/
+│
+├── jpf-core/
+│    ├── build/
+│    │    └── classes/
+│    └── src/
+│         └── project/
+│             └── BankersVerifier.java
+│
+├── TestProgram.jpf
+└── README.md
