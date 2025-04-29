@@ -72,6 +72,9 @@ Run JPF: `jpf TestProgram.jpf`
     │    └── src/
     │         └── project/
     │             └── BankersVerifier.java
+    │             └── BankersVerifier.jpf
+    │             └── DynamicBankersVerifier.java
+    │             └── DynamicBankersVerifier.jpf    
     │
     ├── TestProgram.jpf
     └── README.md
