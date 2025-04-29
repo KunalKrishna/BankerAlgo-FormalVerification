@@ -62,15 +62,15 @@ classpath=build\classes
 jpf TestProgram.jpf
 
 
-Folder structure
-BankerAlgo-FormalVerification/
-│
-├── jpf-core/
-│    ├── build/
-│    │    └── classes/
-│    └── src/
-│         └── project/
-│             └── BankersVerifier.java
-│
-├── TestProgram.jpf
-└── README.md
+    Folder structure
+    BankerAlgo-FormalVerification/
+    │
+    ├── jpf-core/
+    │    ├── build/
+    │    │    └── classes/
+    │    └── src/
+    │         └── project/
+    │             └── BankersVerifier.java
+    │
+    ├── TestProgram.jpf
+    └── README.md
