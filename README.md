@@ -55,3 +55,8 @@ Open the terminal (or command prompt).
 Navigate to the folder where TestProgram.java is located.
 Compile the program: javac TestProgram.java  
 Run JPF: jpf TestProgram.jpf 
+
+D:\02.Spring 2025\BankerAlgo-FormalVerification\ jpf-core\src\project
+BankersVerifier.java static case
+
+DynamicBankersVerifier.java dynamic case
