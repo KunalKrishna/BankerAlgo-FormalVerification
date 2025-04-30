@@ -26,6 +26,13 @@ javac -cp "..\..\build\main;..\..\build\classes\java.base" ParallelBankersAlgori
 To save output use : `jpf BankersVerifier.jpf >> output.txt`  (output = fileName)
 Analyze the JPF Output 
 
+Alternatively, you can avoid compiling java program using javac everytime you make changes to java file.
+## Run JPF without explicit javac:
+```
+java -jar /path/to/jpf-core/build/RunJPF.jar banker.jpf
+```
+
+
 ### Step 1 : Write a small Java program
 
 Create a file: `TestProgram.java` file with following content : 
